@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hubbo v7 segmentation test host</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <div class="kicker">Local test host · not production content</div>
+    <h1 id="page-title">Hubbo segmentation test page</h1>
+    <p class="lede">
+      This origin is for Hubbo v7 segmentation end-to-end checks. The embed snippet
+      loads only after a project key is provided (<code>?key=</code> or
+      <code>config.json</code>). Visitor identity is driven by the query string
+      or the panel on the right. Event counts live in this origin’s
+      <code>localStorage.hubbo.events</code> and are never sent to the API.
+    </p>
+    <nav class="fake-nav" aria-label="Variant links">
+      <a id="link-root" href="./">Base</a>
+      <a id="link-anon" href="anonymous.html">Anonymous</a>
+      <a id="link-id" href="identified.html">Identified</a>
+      <a id="link-spoof" href="spoofed.html">Spoofed traits</a>
+    </nav>
+    <section class="card">
+      <h2>Page body</h2>
+      <p id="page-blurb">Placeholder article so the widget has a normal host page to sit on.</p>
+      <p>Variant: <strong id="variant-label">—</strong> · Origin: <code id="origin-label"></code></p>
+    </section>
+  </main>
+
+  <aside class="panel" id="seg-panel">
+    <h2>Segmentation panel</h2>
+    <div class="banner" id="status-banner">
+      <div><span class="chip" id="variant-chip">—</span>
+        <span class="chip" id="embed-chip">embed: not injected</span>
+        <span class="chip" id="id-chip">anonymous</span>
+      </div>
+      <div class="ts" id="clock">—</div>
+    </div>
+
+    <div class="kv"><b>Origin</b><code id="p-origin">—</code></div>
+    <div class="kv"><b>Path</b><code id="p-path">—</code></div>
+    <div class="kv"><b>Key source</b><span id="p-key-source">—</span></div>
+    <div class="kv"><b>Project key</b><code id="p-key">—</code></div>
+    <div class="kv"><b>Sent at</b><code id="p-sent-at">—</code></div>
+    <div class="kv"><b>Visitor id</b><code id="p-vid">—</code></div>
+    <div class="kv"><b>Email</b><code id="p-email">—</code></div>
+    <div class="kv"><b>userHash</b><code id="p-hash">—</code></div>
+    <div class="kv"><b>Traits sent</b><code id="p-traits">—</code></div>
+    <div class="kv"><b>hubbo:visitor</b><code id="p-stored">—</code></div>
+    <div class="kv"><b>Events</b><code id="p-events">{}</code></div>
+    <div class="kv"><b>Last action</b><span id="p-action">page load</span></div>
+
+    <h3>Identify</h3>
+    <label>id (vid)<input id="f-id" autocomplete="off" placeholder="u1" /></label>
+    <label>email<input id="f-email" autocomplete="off" placeholder="optional" /></label>
+    <label>traits (JSON)<textarea id="f-traits" placeholder='{"plan":"pro"}'></textarea></label>
+    <label>userHash (hex HMAC)<input id="f-hash" autocomplete="off" placeholder="optional unless IV is on" /></label>
+    <div class="row">
+      <button type="button" id="btn-identify">identify()</button>
+      <button type="button" id="btn-hash-identify" class="secondary">/hash then identify()</button>
+      <button type="button" id="btn-reset" class="danger">reset()</button>
+    </div>
+    <div class="row">
+      <button type="button" id="btn-preset-pro" class="secondary">preset u1 / plan:pro</button>
+      <button type="button" id="btn-preset-free" class="secondary">u1 / plan:free</button>
+      <button type="button" id="btn-preset-spoof" class="secondary">attacker / AcmeSecretCorp</button>
+    </div>
+    <p class="hint">Calls <code>window.hubbo.identify({ id, email, traits, userHash })</code>
+      (EMBED@1c31aa2 <code>src/utils/identify.ts:133–181</code>). If the embed is not yet
+      loaded, the same payload is set on <code>window.__hubboBootIdentify</code>
+      (<code>identify.ts:238–241</code>) before the snippet is injected.</p>
+
+    <h3>Events · hubbo.track</h3>
+    <div class="row">
+      <button type="button" id="btn-track-pv">track('pricing_view')</button>
+      <button type="button" id="btn-track-pv3" class="secondary">track ×3</button>
+      <button type="button" id="btn-clear-events" class="secondary">clear events</button>
+    </div>
+    <label>custom event <input id="f-event" placeholder="pricing_view" /></label>
+    <div class="row">
+      <button type="button" id="btn-track-custom" class="secondary">track(custom)</button>
+    </div>
+    <p class="hint">Increments local counts only
+      (EMBED@1c31aa2 <code>src/utils/event-rules.ts:23–29</code>, installed at
+      <code>identify.ts:226</code>). Name must match <code>/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/</code>.
+      Counts are not sent to the API.</p>
+
+    <h3>Storage / page</h3>
+    <div class="row">
+      <button type="button" id="btn-refresh" class="secondary">refresh panel</button>
+      <button type="button" id="btn-reload" class="secondary">reload page</button>
+      <button type="button" id="btn-clear-hubbo" class="danger">clear localStorage.hubbo</button>
+    </div>
+    <pre id="raw"></pre>
+    <p class="cite">
+      HMAC for IV: local <code>GET /hash?id=&lt;userId&gt;</code> returns
+      <code>{id, userHash}</code> = hex HMAC-SHA256(secret, userId)
+      (API@ef9fa52 <code>src/utils/identity-verify.ts:6–8</code>).
+      Secret is server-side only (<code>secret.txt</code>, mode 600), never in this page.
+      Query format:
+      <code>?key=PROJECT_KEY&amp;vid=u1&amp;email=a@b.c&amp;traits=BASE64URL_JSON&amp;hash=HEX&amp;auto_hash=1</code>.
+      <code>traits</code> may also be a URL-encoded JSON object.
+    </p>
+  </aside>
+  <script src="app.js"></script>
+</body>
+</html>
